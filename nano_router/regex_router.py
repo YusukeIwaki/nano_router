@@ -31,9 +31,15 @@ class LinearSearchRouter(object):
         return key == target
 
     def handle(self, target, *args, **kwargs):
-        for key in self._routes.keys():
-            if self.match(key, target):
-                return self._routes[key](*args, **kwargs)
+        try:
+            for key in self._routes.keys():
+                if self.match(key, target):
+                    return self._routes[key](*args, **kwargs)
+        except TypeError:
+            pass
+        return self.handle_default_route(*args, **kwargs)
+
+    def handle_default_route(self, *args, **kwargs):
         if callable(self._default_route):
             return self._default_route(*args, **kwargs)
         else:
@@ -43,9 +49,12 @@ class RegexRouter(LinearSearchRouter):
     def __init__(self, regex_flags = 0):
         super(RegexRouter, self).__init__()
         self.regex_flags = regex_flags
+        self._compiled = {}
     
     def Route(self, regex):
+        self._compiled[regex] = re.compile(regex, flags = self.regex_flags)
         return super(RegexRouter, self).Route(regex)
     
     def match(self, regex, target):
-        return re.match(regex, target, flags = self.regex_flags)
+        compiled_regex = self._compiled[regex]
+        return compiled_regex.match(target)
